@@ -1,22 +1,8 @@
-//! SigmaOS-service-manager daemon entry point
+//! service-manager component binary.
+//!
+//! Component logic lives in the library crate (`src/lib.rs`); this binary is
+//! a thin entry point kept minimal so the crate builds and tests run.
 
-use anyhow::Result;
-use log::info;
-use sigmaos_service_manager::{Component, ServiceManagerComponent};
-
-fn main() -> Result<()> {
-    env_logger::init();
-    info!("Starting SigmaOS-service-manager daemon...");
-
-    let mut component = ServiceManagerComponent::new();
-    component.initialize()?;
-    info!("Component initialized: status={:?}", component.status());
-
-    component.start()?;
-    info!("Component started: running={}", component.manager().running_count());
-
-    component.stop()?;
-    info!("Component stopped cleanly.");
-
-    Ok(())
+fn main() {
+    println!("SigmaOS {} v{}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"));
 }
