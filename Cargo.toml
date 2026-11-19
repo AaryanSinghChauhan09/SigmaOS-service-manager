@@ -1,18 +1,15 @@
 [package]
-name = "sigmaos-service-manager"
+name = "SigmaOS-service-manager"
 version = "0.1.0"
 edition = "2021"
-authors = ["SigmaOS Team"]
-license = "MIT OR Apache-2.0"
-description = "SigmaOS service lifecycle and dependency management supervisor"
-repository = "https://github.com/AaryanSinghChauhan09/SigmaOS-service-manager"
+license = "Apache-2.0"
+description = "SigmaOS sigmaos_service_manager component"
+
+[lib]
+name = "sigmaos_service_manager"
+path = "src/lib.rs"
 
 [dependencies]
-anyhow = "1.0"
-thiserror = "1.0"
-log = "0.4"
-env_logger = "0.10"
-serde = { version = "1.0", features = ["derive"] }
-toml = "0.8"
+thiserror = "1"
 
 [dev-dependencies]

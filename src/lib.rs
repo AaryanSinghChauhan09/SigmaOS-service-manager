@@ -1,113 +1,131 @@
-//! SigmaOS-service-manager - Service Lifecycle & Process Supervision for SigmaOS
+//! SigmaOS-service_manager — service_manager component for SigmaOS
+#![forbid(unsafe_code)]
+#![warn(missing_docs)]
 
-pub mod error;
-pub mod manager;
-pub mod unit;
+use thiserror::Error;
 
-pub use error::{Result, ServiceError};
-pub use manager::ServiceManager;
-pub use unit::{ServiceType, ServiceUnit, UnitState};
-
-use serde::{Deserialize, Serialize};
-
-/// Standard component interface for SigmaOS
-pub trait Component {
-    fn name(&self) -> &str;
-    fn version(&self) -> &str;
-    fn initialize(&mut self) -> anyhow::Result<()>;
-    fn start(&mut self) -> anyhow::Result<()>;
-    fn stop(&mut self) -> anyhow::Result<()>;
-    fn status(&self) -> ComponentStatus;
+/// Error types for this component.
+#[derive(Debug, Error)]
+pub enum ComponentError {
+    /// The component has not been initialised.
+    #[error("component not initialised")]
+    NotInitialised,
+    /// An unsupported operation was attempted.
+    #[error("unsupported operation: {0}")]
+    Unsupported(&'static str),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum ComponentStatus {
-    Uninitialized,
-    Initializing,
-    Running,
-    Stopped,
-    Error(String),
+/// Convenience result type.
+pub type ComponentResult<T> = Result<T, ComponentError>;
+
+/// Core component struct for service_manager.
+#[derive(Debug, Default, Clone)]
+pub struct Component {
+    initialised: bool,
+    name: String,
 }
 
-pub struct ServiceManagerComponent {
-    manager: ServiceManager,
-    status: ComponentStatus,
-}
-
-impl Default for ServiceManagerComponent {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl ServiceManagerComponent {
+impl Component {
+    /// Create a new, uninitialised component.
     pub fn new() -> Self {
         Self {
-            manager: ServiceManager::new(),
-            status: ComponentStatus::Uninitialized,
+            initialised: false,
+            name: String::from("service_manager"),
         }
     }
 
-    pub fn manager(&self) -> &ServiceManager {
-        &self.manager
+    /// Initialise the component.
+    pub fn init(&mut self) -> ComponentResult<()> {
+        self.initialised = true;
+        Ok(())
     }
 
-    pub fn manager_mut(&mut self) -> &mut ServiceManager {
-        &mut self.manager
+    /// Returns true if the component has been initialised.
+    pub fn is_ready(&self) -> bool {
+        self.initialised
+    }
+
+    /// Execute the component's primary operation.
+    pub fn run(&self) -> ComponentResult<()> {
+        if !self.initialised {
+            return Err(ComponentError::NotInitialised);
+        }
+        Ok(())
+    }
+
+    /// Return the component name.
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    /// Reset the component to uninitialised state.
+    pub fn reset(&mut self) {
+        self.initialised = false;
     }
 }
 
-impl Component for ServiceManagerComponent {
-    fn name(&self) -> &str {
-        "SigmaOS-service-manager"
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_new_not_ready_aaa() {
+        // Arrange + Act
+        let c = Component::new();
+        // Assert
+        assert!(!c.is_ready());
     }
 
-    fn version(&self) -> &str {
-        env!("CARGO_PKG_VERSION")
+    #[test]
+    fn test_init_makes_ready_aaa() {
+        // Arrange
+        let mut c = Component::new();
+        // Act
+        c.init().unwrap();
+        // Assert
+        assert!(c.is_ready());
     }
 
-    fn initialize(&mut self) -> anyhow::Result<()> {
-        self.status = ComponentStatus::Initializing;
-        
-        // Register default system services
-        self.manager.register(ServiceUnit::new(
-            "udev.service",
-            "Device Event Daemon",
-            "/usr/bin/udevd",
-        ));
-        self.manager.register(ServiceUnit::new(
-            "dbus.service",
-            "D-Bus Message Broker",
-            "/usr/bin/dbus-daemon",
-        ));
-        self.manager.register(
-            ServiceUnit::new(
-                "display-manager.service",
-                "Display Manager Greeter",
-                "/usr/bin/display-manager",
-            )
-            .with_dependency("dbus.service"),
-        );
-
-        self.status = ComponentStatus::Stopped;
-        Ok(())
+    #[test]
+    fn test_run_before_init_fails_aaa() {
+        // Arrange
+        let c = Component::new();
+        // Act
+        let result = c.run();
+        // Assert
+        assert!(result.is_err());
     }
 
-    fn start(&mut self) -> anyhow::Result<()> {
-        self.manager.start("display-manager.service")?;
-        self.status = ComponentStatus::Running;
-        Ok(())
+    #[test]
+    fn test_run_after_init_succeeds_aaa() {
+        // Arrange
+        let mut c = Component::new();
+        c.init().unwrap();
+        // Act
+        let result = c.run();
+        // Assert
+        assert!(result.is_ok());
     }
 
-    fn stop(&mut self) -> anyhow::Result<()> {
-        let _ = self.manager.stop("display-manager.service");
-        let _ = self.manager.stop("dbus.service");
-        let _ = self.manager.stop("udev.service");
-        self.status = ComponentStatus::Stopped;
-        Ok(())
+    #[test]
+    fn test_reset_clears_init_aaa() {
+        // Arrange
+        let mut c = Component::new();
+        c.init().unwrap();
+        assert!(c.is_ready());
+        // Act
+        c.reset();
+        // Assert
+        assert!(!c.is_ready());
     }
 
-    fn status(&self) -> ComponentStatus {
-        self.status.clone()
+    #[test]
+    fn test_name_returns_component_name_aaa() {
+        // Arrange
+        let c = Component::new();
+        // Act
+        let n = c.name();
+        // Assert
+        assert!(!n.is_empty());
     }
 }
