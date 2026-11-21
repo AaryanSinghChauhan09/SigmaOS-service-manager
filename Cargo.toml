@@ -13,3 +13,6 @@ path = "src/lib.rs"
 thiserror = "1"
 
 [dev-dependencies]
+
+sigmaos-component-core = { git = "https://github.com/AaryanSinghChauhan09/SigmaOS-component-core" }
+log = "0.4"
